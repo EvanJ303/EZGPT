@@ -10,10 +10,11 @@ dropout = 0.2
 
 class embedder(nn.Module):
     def __init__(self, vocab_size, embedding_dim):
-        super().__init__()
+        super().__init__()  
         self.embedding = nn.Embedding(vocab_size, embedding_dim)
         self.positional_encoding = nn.Embedding(num_tokens, embedding_dim)
 
     def forward(self, tokens):
         embeddings = self.embedding(tokens)
-        
+        positions = torch.arange(0, num_tokens, dtype=torch.long, device=tokens.device)
+        return embeddings
