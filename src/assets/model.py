@@ -3,10 +3,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 embedding_dim = 128
-num_heads = 8
-num_layers = 8
+num_heads = 12
 num_tokens = 200
-dropout = 0.2
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -18,6 +16,10 @@ class embedder(nn.Module):
 
     def forward(self, tokens):
         embeddings = self.embedding(tokens, dtype=torch.float32)
-        positions = torch.arange(0, num_tokens, dtype=torch.long, device=device)
-        return embeddings
+        positions = torch.arange(0, num_tokens, dtype=torch.long)
+        positions = self.positional_encoding(positions)
+        positional_embeddings = torch.add(embeddings, positions)
+        return positional_embeddings
+    
+class FFN
 
