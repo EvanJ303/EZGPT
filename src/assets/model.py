@@ -30,15 +30,30 @@ class embedder(nn.Module):
     
 #Attention block NN
 
-class attention(nn.Module):
-    def __init__(self, num_heads, num_tokens):
+class attention_block(nn.Module):
+    def __init__(self, num_heads, num_tokens, embedding_dim, head_dim):
         super().__init__()
-        self.q_mats = nn.ModuleList([nn.Linear(embedding_dim, head_dim) for i in range(num_heads)])
-        self.k_mats = nn.ModuleList([nn.Linear(embedding_dim, head_dim) for i in range(num_heads)])
-        self.v_mats = nn.ModuleList([nn.Linear(embedding_dim, head_dim) for i in range(num_heads)])
+        self.num_heads = num_heads
+        self
+
+        self.q_mats = nn.ModuleList([nn.Linear(embedding_dim, head_dim, bias=False) for i in range(num_heads)])
+        self.k_mats = nn.ModuleList([nn.Linear(embedding_dim, head_dim, bias=False) for i in range(num_heads)])
+        self.v_mats = nn.ModuleList([nn.Linear(embedding_dim, head_dim, bias=False) for i in range(num_heads)])
         self.merge_heads = nn.Linear(embedding_dim, embedding_dim)
 
-    def forward(self, embeddings):
+    def forward(self, embedding):
+
+        head_outs = []
+    
         for i in range(num_heads):
+            q_vec = self.q_mats[i](embedding)
+            k_vec = self.q_mats[i](embedding)
+            v_vec = self.v_mats[i](embedding)
+
+            k_transposed = torch.transpose(k_vec)
+
+
+
+
 
 
