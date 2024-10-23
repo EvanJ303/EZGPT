@@ -1,6 +1,5 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
 #Params
 
@@ -47,10 +46,21 @@ class attention_block(nn.Module):
     
         for i in range(num_heads):
             q_vec = self.q_mats[i](embedding)
-            k_vec = self.q_mats[i](embedding)
+            k_vec = self.k_mats[i](embedding)
             v_vec = self.v_mats[i](embedding)
 
-            k_transposed = torch.transpose(k_vec)
+            k_transposed = torch.transpose(k_vec, 1, 2)
+
+            att_scores = torch.matmul(q_vec, k_transposed)
+            att_scores = torch.div(att_scores, head_dim ** 0.5)
+            att_scores = nn.Softmax(att_scores)
+
+            v_transposed = torch.transpose(v_vec, 1, 2)
+
+            output = torch.matmul(att_scores, v_transposed)
+            head_outs.append(output)
+
+
 
 
 
