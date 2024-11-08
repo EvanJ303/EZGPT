@@ -59,8 +59,10 @@ class attention_block(nn.Module):
 
             output = torch.matmul(att_scores, v_transposed)
             head_outs.append(output)
+            
 
 class ffn(nn.Module)
+
 
 
 
