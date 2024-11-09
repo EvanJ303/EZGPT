@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 #Params
 
@@ -30,21 +31,22 @@ class embedder(nn.Module):
 #Attention block NN
 
 class attention_block(nn.Module):
-    def __init__(self, num_heads, num_tokens, embedding_dim, head_dim):
+    def __init__(self, num_heads, embedding_dim, head_dim):
         super().__init__()
         self.num_heads = num_heads
-        self
+        self.embedding_dim = embedding_dim
+        self.head_dim = head_dim
 
-        self.q_mats = nn.ModuleList([nn.Linear(embedding_dim, head_dim, bias=False) for i in range(num_heads)])
-        self.k_mats = nn.ModuleList([nn.Linear(embedding_dim, head_dim, bias=False) for i in range(num_heads)])
-        self.v_mats = nn.ModuleList([nn.Linear(embedding_dim, head_dim, bias=False) for i in range(num_heads)])
-        self.merge_heads = nn.Linear(embedding_dim, embedding_dim)
+        self.q_mats = nn.ModuleList([nn.Linear(self.embedding_dim, self.head_dim, bias=False) for i in range(self.num_heads)])
+        self.k_mats = nn.ModuleList([nn.Linear(self.embedding_dim, self.head_dim, bias=False) for i in range(self.num_heads)])
+        self.v_mats = nn.ModuleList([nn.Linear(self.embedding_dim, self.head_dim, bias=False) for i in range(self.num_heads)])
+        self.merge_heads = nn.Linear(self.embedding_dim, self.embedding_dim)
 
     def forward(self, embedding):
 
         head_outs = []
     
-        for i in range(num_heads):
+        for i in range(self.num_heads):
             q_vec = self.q_mats[i](embedding)
             k_vec = self.k_mats[i](embedding)
             v_vec = self.v_mats[i](embedding)
@@ -52,17 +54,22 @@ class attention_block(nn.Module):
             k_transposed = torch.transpose(k_vec, 1, 2)
 
             att_scores = torch.matmul(q_vec, k_transposed)
-            att_scores = torch.div(att_scores, head_dim ** 0.5)
-            att_scores = nn.Softmax(att_scores)
+            att_scores = torch.div(att_scores, self.head_dim ** 0.5)
+            att_scores = F.softmax(att_scores, 1)
 
             v_transposed = torch.transpose(v_vec, 1, 2)
 
             output = torch.matmul(att_scores, v_transposed)
             head_outs.append(output)
+
+        att_out = torch.cat(head_outs)
+        att_out = self.merge_heads(att_out)
+
+        return att_out
             
 
 class ffn(nn.Module):
-    def __init__
+    def __init__(self)
 
 
 
