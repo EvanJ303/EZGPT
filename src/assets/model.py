@@ -2,13 +2,17 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-#Constants
-embedding_dim = 768
-num_heads = 12
-num_blocks = 12
-num_tokens = 250
-head_dim = embedding_dim / num_heads
-hs_dim = embedding_dim * 4
+#Constants/Hyperparameters
+#1600 dimension embedding space
+#25 heads per self-attention block
+#48 blocks
+#1024 token maximum
+d_model = 1600
+num_heads = 25
+num_blocks = 48
+num_tokens = 1024
+d_head = 64
+hs_dim = 6400
 
 #Check if CUDA is available
 if torch.cuda.is_available():
@@ -19,12 +23,11 @@ else:
     print("(SYSTEM) USING DEVICE: CPU")
 
 #Token embedder NN:
-#250 token maximum
 class embedder(nn.Module):
-    def __init__(self, vocab_size, embedding_dim):
+    def __init__(self, vocab_size, d_model):
         super().__init__()  
-        self.embedding = nn.Embedding(vocab_size, embedding_dim)
-        self.positional_encoding = nn.Embedding(num_tokens, embedding_dim)
+        self.embedding = nn.Embedding(vocab_size, d_model)
+        self.positional_encoding = nn.Embedding(num_tokens, d_model)
 
     def forward(self, tokens):
         embeddings = self.embedding(tokens, dtype = torch.float32)
@@ -33,20 +36,18 @@ class embedder(nn.Module):
         positional_embeddings = torch.add(embeddings, positions)
         return positional_embeddings
     
-#Attention block NN:
-#64 heads
-#Embedding dimension of 768
+#Attention block
 class attention_block(nn.Module):
-    def __init__(self, num_heads, embedding_dim, head_dim):
+    def __init__(self, num_heads, d_model, d_head):
         super().__init__()
         self.num_heads = num_heads
-        self.embedding_dim = embedding_dim
-        self.head_dim = head_dim
+        self.d_model = d_model
+        self.d_head = d_head
 
-        self.q_mats = nn.ModuleList([nn.Linear(self.embedding_dim, self.head_dim, bias = False) for i in range(self.num_heads)])
-        self.k_mats = nn.ModuleList([nn.Linear(self.embedding_dim, self.head_dim, bias = False) for i in range(self.num_heads)])
-        self.v_mats = nn.ModuleList([nn.Linear(self.embedding_dim, self.head_dim, bias = False) for i in range(self.num_heads)])
-        self.merge_heads = nn.Linear(self.embedding_dim, self.embedding_dim)
+        self.q_mats = nn.ModuleList([nn.Linear(self.d_model, self.d_head, bias = False) for head in range(self.num_heads)])
+        self.k_mats = nn.ModuleList([nn.Linear(self.d_model, self.d_head, bias = False) for head in  range(self.num_heads)])
+        self.v_mats = nn.ModuleList([nn.Linear(self.d_model, self.d_head, bias = False) for head in range(self.num_heads)])
+        self.merge_heads = nn.Linear(self.d_model, self.d_model)
 
     def forward(self, embedding):
 
@@ -60,7 +61,7 @@ class attention_block(nn.Module):
             k_transposed = torch.transpose(k_vec, 1, 2)
 
             att_scores = torch.matmul(q_vec, k_transposed)
-            att_scores = torch.div(att_scores, self.head_dim ** 0.5)
+            att_scores = torch.div(att_scores, self.d_head ** 0.5)
             att_scores = F.softmax(att_scores, 1)
 
             v_transposed = torch.transpose(v_vec, 1, 2)
@@ -75,13 +76,13 @@ class attention_block(nn.Module):
             
 
 class ffn(nn.Module):
-    def __init__(self, embedding_dim, hs_dim):
+    def __init__(self, d_model, hs_dim):
         super().__init__()
-        self.embedding_dim = embedding_dim
+        self.d_model = d_model
         self.hs_dim = hs_dim
 
-        self.l1 = nn.Linear(self.embedding_dim, self.hs_dim)
-        self.l2 = nn.Linear(self.hs_dim, embedding_dim)
+        self.l1 = nn.Linear(self.d_model, self.hs_dim)
+        self.l2 = nn.Linear(self.hs_dim, d_model)
 
     def forward(self, embedding):
         hidden_state = self.l1(embedding)
