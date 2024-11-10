@@ -95,6 +95,8 @@ class gpt(nn.Module):
         super().__init__()
         self.num_blocks = num_blocks
 
+        self.att_blocks = nn.ModuleList([])
+
 
 
 
