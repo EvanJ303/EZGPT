@@ -44,9 +44,9 @@ class attention_block(nn.Module):
         self.d_model = d_model
         self.d_head = d_head
 
-        self.q_mats = nn.ModuleList([nn.Linear(self.d_model, self.d_head, bias = False) for head in range(self.num_heads)])
-        self.k_mats = nn.ModuleList([nn.Linear(self.d_model, self.d_head, bias = False) for head in range(self.num_heads)])
-        self.v_mats = nn.ModuleList([nn.Linear(self.d_model, self.d_head, bias = False) for head in range(self.num_heads)])
+        self.q_mats = nn.ModuleList([nn.Linear(self.d_model, self.d_head, bias = False) for _ in range(self.num_heads)])
+        self.k_mats = nn.ModuleList([nn.Linear(self.d_model, self.d_head, bias = False) for _ in range(self.num_heads)])
+        self.v_mats = nn.ModuleList([nn.Linear(self.d_model, self.d_head, bias = False) for _ in range(self.num_heads)])
         self.merge_heads = nn.Linear(self.d_model, self.d_model)
 
     def forward(self, embedding):
