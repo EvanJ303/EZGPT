@@ -13,6 +13,7 @@ num_blocks = 48
 num_tokens = 1024
 d_head = 64
 hs_dim = 6400
+vocab_size = 69420 #placeholder
 
 #Check if CUDA is available
 if torch.cuda.is_available():
@@ -44,19 +45,19 @@ class attention_block(nn.Module):
         self.d_model = d_model
         self.d_head = d_head
 
-        self.q_mats = nn.ModuleList([nn.Linear(self.d_model, self.d_head, bias = False) for _ in range(self.num_heads)])
-        self.k_mats = nn.ModuleList([nn.Linear(self.d_model, self.d_head, bias = False) for _ in range(self.num_heads)])
-        self.v_mats = nn.ModuleList([nn.Linear(self.d_model, self.d_head, bias = False) for _ in range(self.num_heads)])
+        self.q_mat = nn.Linear(self.d_model, self.d_head)
+        self.k_mat = nn.Linear(self.d_model, self.d_head)
+        self.v_mat = nn.Linear(self.d_model, self.d_head)
         self.merge_heads = nn.Linear(self.d_model, self.d_model)
 
-    def forward(self, embedding):
+    def forward(self, x):
 
         head_outs = []
     
-        for i in range(self.num_heads):
-            q_vec = self.q_mats[i](embedding)
-            k_vec = self.k_mats[i](embedding)
-            v_vec = self.v_mats[i](embedding)
+        for _ in range(self.num_heads):
+            q_vec = self.q_mats(x)
+            k_vec = self.k_mats(x)
+            v_vec = self.v_mats(x)
 
             k_transposed = torch.transpose(k_vec, 1, 2)
 
@@ -69,7 +70,7 @@ class attention_block(nn.Module):
             output = torch.matmul(att_scores, v_transposed)
             head_outs.append(output)
 
-        att_out = torch.cat(head_outs)
+        att_out = torch.cat(head_outs, 2)
         att_out = self.merge_heads(att_out)
 
         return att_out
@@ -90,13 +91,29 @@ class ffn(nn.Module):
         output = self.l2(hidden_state)
 
         return output
+    
+class output_layer(nn.Module):
+    def __init__(self, d_model, vocab_size):
+        self.d_model = d_model
 
 class gpt(nn.Module):
-    def __init__(self, num_blocks):
+    def __init__(self, num_blocks, num_heads, d_model, d_head, vocab_size, hs_dim):
         super().__init__()
         self.num_blocks = num_blocks
+        self.num_heads = num_heads
+        self.d_model = d_model
+        self.d_head = d_head
+        self.vocab_size = vocab_size
+        self.hs_dim = hs_dim
 
-        self.att_blocks = nn.ModuleList([])
+        self.embedder = embedder(self.vocab_size, self.d_model)
+        self.attention_block = attention_block(self.num_heads, self.d_model, self.d_head)
+        self.ffn = ffn(self.d_model, self.hs_dim)
+
+    def forward(self, x):
+        for _ in range(num_blocks):
+            x
+        
 
 
 
