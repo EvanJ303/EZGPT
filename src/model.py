@@ -157,16 +157,3 @@ class gpt(nn.Module):
         x = self.output_layer(x)
 
         return x
-
-        
-            
-        
-
-
-
-
-
-
-
-
-
