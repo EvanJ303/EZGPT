@@ -5,19 +5,19 @@ import torch.nn.functional as F
 
 """
 Constants/Hyperparameters:
-1600 dimension embedding space
-25 heads per self-attention block
-48 blocks
+1024 dimension embedding space
+16 heads per self-attention block
+24 blocks
 1024 token maximum
 """
 
-d_model = 1600
-num_heads = 25
-num_blocks = 48
+d_model = 1024
+num_heads = 16
+num_blocks = 24
 num_tokens = 1024
 d_head = 64
-d_hs = 6400
-vocab_size = 69420 #placeholder
+d_hs = 4096
+vocab_size = 50257
 
 #Check if CUDA is available
 if torch.cuda.is_available():
@@ -27,16 +27,24 @@ else:
     device = torch.device("cpu")
     print("(SYSTEM): USING DEVICE: CPU")
 
-#Token embedder NN:
+#Token embedder
 class embedder(nn.Module):
-    def __init__(self, vocab_size, d_model):
+    def __init__(self, vocab_size, d_model, num_tokens):
         super().__init__()  
-        self.embedding = nn.Embedding(vocab_size, d_model)
-        self.positional_encoding = nn.Embedding(num_tokens, d_model)
+        self.vocab_size = vocab_size
+        self.d_model = d_model
+        self.num_tokens = num_tokens
+
+        self.embedding = nn.Embedding(self.vocab_size, self.d_model)
+        self.positional_encoding = nn.Embedding(self.num_tokens, self.d_model)
 
     def forward(self, x):
-        x = self.embedding(x, dtype = torch.float32)
-        y = torch.arange(0, num_tokens, dtype = torch.long)
+        batch_size, seq_len = x.size()
+
+        x = self.embedding(x)
+        y = torch.arange(0, seq_len)
+        y = y.unsqueeze(0)
+        y = y.expand(batch_size, seq_len)
         y = self.positional_encoding(y)
         x = torch.add(x, y)
         return x
@@ -71,20 +79,22 @@ class attention_block(nn.Module):
 
         k = k.transpose(2, 3)
 
-        x = torch.matmul(q, k)
-        x = torch.div(x, self.d_head ** 0.5)
-        x = x.masked_fill(att_mask == 1, float('-inf'))
-        x = F.softmax(x, 2)
+        y = torch.matmul(q, k)
+        y = torch.div(y, self.d_head ** 0.5)
+        y = y.masked_fill(att_mask == 1, float('-inf'))
+        y = F.softmax(y, 2)
 
         v = v.transpose(2, 3)
 
-        x = torch.matmul(x, v)
+        y = torch.matmul(y, v)
 
-        x = torch.cat(x, -1)
-        x = self.merge_heads(x)
+        y = y.transpose(1, 2).contiguous()
+        y = y.view(batch_size, seq_len, self.d_model)
+        y = self.merge_heads(y)
 
-        return x
+        return y
             
+#FFN block
 class ffn(nn.Module):
     def __init__(self, d_model, d_hs):
         super().__init__()
@@ -92,7 +102,7 @@ class ffn(nn.Module):
         self.d_hs = d_hs
 
         self.l1 = nn.Linear(self.d_model, self.d_hs)
-        self.l2 = nn.Linear(self.d_hs, d_model)
+        self.l2 = nn.Linear(self.d_hs, self.d_model)
 
     def forward(self, x):
         x = self.l1(x)
@@ -101,6 +111,7 @@ class ffn(nn.Module):
 
         return x
     
+#Linear output projection layer
 class output_layer(nn.Module):
     def __init__(self, d_model, vocab_size):
         super().__init__()
@@ -111,10 +122,10 @@ class output_layer(nn.Module):
 
     def forward(self, x):
         x = self.l1(x)
-        x = F.softmax(x)
 
         return x
 
+#GPT implementation
 class gpt(nn.Module):
     def __init__(self, num_blocks, num_heads, d_model, d_head, vocab_size, d_hs):
         super().__init__()
@@ -128,17 +139,20 @@ class gpt(nn.Module):
         self.embedder = embedder(self.vocab_size, self.d_model)
         self.attention_block = nn.ModuleList([attention_block(self.num_heads, self.d_model, self.d_head) for _ in range(self.num_blocks)])
         self.ffn = nn.ModuleList([ffn(self.d_model, self.d_hs) for _ in range(self.num_blocks)])
+        self.layer_norm = nn.ModuleList([nn.ModuleList([nn.LayerNorm(self.d_model) for _ in range(2)]) for _ in range(self.num_blocks)])
         self.output_layer = output_layer(self.d_model, self.vocab_size)
 
     def forward(self, x):
         x = self.embedder(x)
 
-        for i in range(num_blocks):
+        for i in range(self.num_blocks):
             y = self.attention_block[i](x)
             x = torch.add(x, y)
+            x = self.layer_norm[i][0](x)
 
             y = self.ffn[i](x)
             x = torch.add(x, y)
+            x = self.layer_norm[i][1](x)
 
         x = self.output_layer(x)
 
