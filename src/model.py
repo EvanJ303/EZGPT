@@ -127,7 +127,7 @@ class output_layer(nn.Module):
 
 #GPT implementation
 class gpt(nn.Module):
-    def __init__(self, num_blocks, num_heads, d_model, d_head, vocab_size, d_hs):
+    def __init__(self, num_blocks, num_heads, d_model, d_head, vocab_size, d_hs, num_tokens):
         super().__init__()
         self.num_blocks = num_blocks
         self.num_heads = num_heads
@@ -135,8 +135,9 @@ class gpt(nn.Module):
         self.d_head = d_head
         self.vocab_size = vocab_size
         self.d_hs = d_hs
+        self.num_tokens = num_tokens
 
-        self.embedder = embedder(self.vocab_size, self.d_model)
+        self.embedder = embedder(self.vocab_size, self.d_model, self.num_tokens)
         self.attention_block = nn.ModuleList([attention_block(self.num_heads, self.d_model, self.d_head) for _ in range(self.num_blocks)])
         self.ffn = nn.ModuleList([ffn(self.d_model, self.d_hs) for _ in range(self.num_blocks)])
         self.layer_norm = nn.ModuleList([nn.ModuleList([nn.LayerNorm(self.d_model) for _ in range(2)]) for _ in range(self.num_blocks)])
