@@ -19,14 +19,6 @@ d_head = 64
 d_hs = 4096
 vocab_size = 50257
 
-#Check if CUDA is available
-if torch.cuda.is_available():
-    device = torch.device("cuda")
-    print("(SYSTEM): USING DEVICE: CUDA")
-else:
-    device = torch.device("cpu")
-    print("(SYSTEM): USING DEVICE: CPU")
-
 #Token embedder
 class embedder(nn.Module):
     def __init__(self, vocab_size, d_model, num_tokens):
