@@ -3,65 +3,13 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-"""
-Constants/Hyperparameters:
-
-GPT2 SMALL:
-768 dimension embedding space
-12 heads per self-attention block
-12 blocks
-1024 tokens maximum
-
-GPT2 MED:
-1024 dimension embedding space
-16 heads per self-attention block
-24 blocks
-1024 token maximum
-
-GPT2 LARGE:
-1280 dimension embedding space
-20 heads per self-attention block
-24 blocks
-1024 token maximum
-"""
-
-class GPT2SMALLCFG:
-    d_model = 768
-    num_heads = 12
-    num_blocks = 12
-    num_tokens = 1024
-    d_head = 64
-    d_hs = 3072
-    vocab_size = 50257
-    dropout = 0.1
-
-class GPT2MEDCFG:
-    d_model = 1024
-    num_heads = 16
-    num_blocks = 24
-    num_tokens = 1024
-    d_head = 64
-    d_hs = 4096
-    vocab_size = 50257
-    dropout = 0.1
-
-class GPT2LARGECFG:
-    d_model = 1280
-    num_heads = 20
-    num_blocks = 24
-    num_tokens = 1024
-    d_head = 64
-    d_hs = 5120
-    vocab_size = 50257
-    dropout = 0.1
-
 #Token embedder
 class embedder(nn.Module):
-    def __init__(self, vocab_size, d_model, num_tokens):
+    def __init__(self, config):
         super().__init__()  
-        self.vocab_size = vocab_size
-        self.d_model = d_model
-        self.num_tokens = num_tokens
+        self.vocab_size = config.vocab_size
+        self.d_model = config.d_model
+        self.num_tokens = config.num_tokens
 
         self.embedding = nn.Embedding(self.vocab_size, self.d_model)
         self.positional_encoding = nn.Embedding(self.num_tokens, self.d_model)
@@ -79,11 +27,11 @@ class embedder(nn.Module):
     
 #Attention block
 class attention_block(nn.Module):
-    def __init__(self, num_heads, d_model, d_head):
+    def __init__(self, config):
         super().__init__()
-        self.num_heads = num_heads
-        self.d_model = d_model
-        self.d_head = d_head
+        self.num_heads = config.num_heads
+        self.d_model = config.d_model
+        self.d_head = config.d_head
 
         self.qkv = nn.Linear(self.d_model, self.d_model * 3)
         self.merge_heads = nn.Linear(self.d_model, self.d_model)
@@ -124,10 +72,10 @@ class attention_block(nn.Module):
             
 #FFN block
 class ffn(nn.Module):
-    def __init__(self, d_model, d_hs):
+    def __init__(self, config):
         super().__init__()
-        self.d_model = d_model
-        self.d_hs = d_hs
+        self.d_model = config.d_model
+        self.d_hs = config.d_hs
 
         self.l1 = nn.Linear(self.d_model, self.d_hs)
         self.l2 = nn.Linear(self.d_hs, self.d_model)
@@ -141,10 +89,10 @@ class ffn(nn.Module):
     
 #Linear output projection layer
 class output_layer(nn.Module):
-    def __init__(self, d_model, vocab_size):
+    def __init__(self, config):
         super().__init__()
-        self.d_model = d_model
-        self.vocab_size = vocab_size
+        self.d_model = config.d_model
+        self.vocab_size = config.vocab_size
 
         self.l1 = nn.Linear(self.d_model, self.vocab_size)
 
@@ -155,21 +103,19 @@ class output_layer(nn.Module):
 
 #GPT implementation
 class gpt(nn.Module):
-    def __init__(self, num_blocks, num_heads, d_model, d_head, vocab_size, d_hs, num_tokens):
+    def __init__(self, config):
         super().__init__()
-        self.num_blocks = num_blocks
-        self.num_heads = num_heads
-        self.d_model = d_model
-        self.d_head = d_head
-        self.vocab_size = vocab_size
-        self.d_hs = d_hs
-        self.num_tokens = num_tokens
+        self.config = config
+        self.num_blocks = config.num_blocks
+        self.d_model = config.d_model
+        self.dropout = config.dropout
 
-        self.embedder = embedder(self.vocab_size, self.d_model, self.num_tokens)
-        self.attention_block = nn.ModuleList([attention_block(self.num_heads, self.d_model, self.d_head) for _ in range(self.num_blocks)])
-        self.ffn = nn.ModuleList([ffn(self.d_model, self.d_hs) for _ in range(self.num_blocks)])
+        self.embedder = embedder(self.config)
+        self.attention_block = nn.ModuleList([attention_block(self.config) for _ in range(self.num_blocks)])
+        self.ffn = nn.ModuleList([ffn(self.config) for _ in range(self.num_blocks)])
         self.layer_norm = nn.ModuleList([nn.ModuleList([nn.LayerNorm(self.d_model) for _ in range(2)]) for _ in range(self.num_blocks)])
-        self.output_layer = output_layer(self.d_model, self.vocab_size)
+        self.dropout_layer = nn.Dropout(self.dropout)
+        self.output_layer = output_layer(self.config)
 
     def forward(self, x):
         x = self.embedder(x)
@@ -178,12 +124,13 @@ class gpt(nn.Module):
             y = self.attention_block[i](x)
             x = torch.add(x, y)
             x = self.layer_norm[i][0](x)
+            x = self.dropout_layer(x)
 
             y = self.ffn[i](x)
             x = torch.add(x, y)
             x = self.layer_norm[i][1](x)
+            x = self.dropout_layer(x)
 
         x = self.output_layer(x)
 
         return x
-    
