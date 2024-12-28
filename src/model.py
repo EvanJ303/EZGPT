@@ -39,7 +39,7 @@ class attention_block(nn.Module):
     def forward(self, x):
         batch_size, seq_len, _ = x.size()
 
-        att_mask = torch.triu(torch.ones(seq_len, seq_len), diagonal = 0)
+        att_mask = torch.triu(torch.ones(seq_len, seq_len), diagonal=0)
         att_mask = att_mask.unsqueeze(0).unsqueeze(0)
         att_mask = att_mask.expand(batch_size, self.num_heads, seq_len, seq_len)
     
@@ -57,7 +57,7 @@ class attention_block(nn.Module):
 
         y = torch.matmul(q, k)
         y = torch.div(y, self.d_head ** 0.5)
-        y = y.masked_fill(att_mask == 1, float('-inf'))
+        y = y.masked_fill(att_mask==1, float('-inf'))
         y = F.softmax(y, 2)
 
         v = v.transpose(2, 3)
