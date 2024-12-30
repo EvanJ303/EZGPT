@@ -1,5 +1,3 @@
-import torch.optim as optim
-
 """
 Constants/Hyperparameters:
 
@@ -20,6 +18,18 @@ GPT2 Large:
 20 heads per self-attention block
 24 blocks
 1024 token maximum
+
+Custom model configurations should be written below this comment
+
+Required parameters:
+d_model
+num_heads
+num_blocks
+num_tokens
+d_head
+d_hs
+vocab_size
+dropout
 """
 
 class GPT2_small_cfg:
@@ -52,6 +62,14 @@ class GPT2_large_cfg:
     vocab_size = 50257
     dropout = 0.1
 
-#Default training config
-class default_train_cfg:
-    optimizer = optim.Adam()
+"""
+Custom training configurations should be written below this comment
+
+Required parameters:
+learn_rate
+batch_size
+device
+num_workers
+num_epochs
+max_norm
+"""

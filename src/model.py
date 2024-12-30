@@ -1,4 +1,3 @@
-#It is recommended to use the CUDA version of PyTorch
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
